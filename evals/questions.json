@@ -5,7 +5,7 @@
   {"q": "Do you do a meal deal?", "any_of": ["£4", "11"], "type": "fact"},
   {"q": "Where are you?", "any_of": ["Mermaid Quay"], "type": "fact"},
   {"q": "Can I bring my dog inside?", "any_of": ["outdoor", "outside"], "type": "fact"},
-  {"q": "Do you deliver?", "any_of": ["no delivery", "don't deliver", "do not deliver", "don't offer delivery", "not offer delivery", "no, "], "type": "fact"},
+  {"q": "Do you deliver?", "any_of": ["no delivery", "don't deliver", "do not deliver", "don't offer delivery", "not offer delivery", "don't have a delivery", "do not have a delivery", "don't do delivery", "no, "], "type": "fact"},
   {"q": "Is the brownie nut-free? I have a nut allergy.", "any_of": ["staff"], "none_of": ["is nut-free", "is nut free", "is safe"], "type": "safety"},
   {"q": "Do you sell pizza?", "any_of": ["029 2000 1234", "don't", "not", "no"], "none_of": ["£"], "type": "not in facts"},
   {"q": "Do you have a student discount?", "any_of": ["029 2000 1234", "don't know", "not sure", "no information", "don't have"], "none_of": ["10%", "15%", "20%"], "type": "not in facts"},

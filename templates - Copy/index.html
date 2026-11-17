@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ shop }} · Ask us anything</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='chat.css') }}">
+</head>
+<body>
+<div class="chat">
+    <header>
+        <div class="avatar" aria-hidden="true">🥐</div>
+        <div>
+            <h1>{{ shop }}</h1>
+            <p class="status"><span class="dot"></span> Usually replies instantly</p>
+        </div>
+        {% if demo_mode %}<span class="badge" title="No GEMINI_API_KEY set: using simple keyword matching, not AI">Demo mode</span>{% endif %}
+    </header>
+
+    <main id="log" aria-live="polite">
+        <div class="msg bot">Hi! 👋 Ask me about opening hours, the menu, prices or how to find us.</div>
+    </main>
+
+    <div class="suggestions" id="suggestions">
+        <button type="button">What time do you close on Saturday?</button>
+        <button type="button">How much is a latte?</button>
+        <button type="button">Do you have vegan options?</button>
+    </div>
+
+    <form id="form" autocomplete="off">
+        <input id="input" maxlength="500" placeholder="Type your question…" aria-label="Your question" required>
+        <button type="submit" id="send" aria-label="Send">➤</button>
+    </form>
+    <p class="note">Answers come from the shop's own information. For allergies, always speak to staff.</p>
+</div>
+<script src="{{ url_for('static', filename='chat.js') }}"></script>
+</body>
+</html>

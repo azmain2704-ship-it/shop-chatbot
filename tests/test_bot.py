@@ -39,6 +39,7 @@ def test_api_failure_gives_a_helpful_fallback_not_a_crash():
     bot = ShopBot(FACTS, FakeLLM(error=RuntimeError("quota exceeded")))
     reply = bot.answer("Are you open?")
     assert "029 2000 1234" in reply
+    assert bot.last_error == "RuntimeError: quota exceeded"  # the real error is kept for the developer
 
 
 def test_empty_ai_reply_also_falls_back():
@@ -121,3 +122,65 @@ def test_gemini_adapter_builds_a_valid_request(monkeypatch):
     assert [c.role for c in sent["contents"]] == ["user", "model", "user"]  # Gemini calls the bot "model"
     assert sent["contents"][-1].parts[0].text == "When do you close?"
     assert sent["config"].system_instruction == "SYSTEM RULES"
+
+
+def test_model_is_picked_automatically_from_what_the_key_can_use():
+    from bot import choose_model
+
+    from bot import rank_models
+
+    available = ["gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-3.5-flash", "gemini-3.5-flash-preview-05",
+                 "gemini-2.5-flash-image", "gemini-2.5-pro"]
+    assert choose_model(available) == "gemini-3.5-flash"          # newest stable Flash text model
+    # Backups alternate Flash and Flash-Lite, so they don't all fail together when one family is busy
+    assert rank_models(available)[:3] == ["gemini-3.5-flash", "gemini-2.5-flash-lite", "gemini-2.5-flash"]
+    assert choose_model(["gemini-3-flash-preview", "gemini-2.5-pro"]) == "gemini-3-flash-preview"
+    with pytest.raises(RuntimeError):
+        choose_model([])
+
+
+def test_busy_model_falls_back_to_the_next_one(monkeypatch):
+    """If Google says a model is overloaded (503), the bot retries, then moves to the next-best model."""
+    from bot import GeminiLLM
+
+    class Busy(Exception):
+        code = 503
+
+    llm = GeminiLLM(api_key="test-key-not-real", model="gemini-9-flash", retry_wait=0)
+    llm.models = ["gemini-9-flash", "gemini-8-flash"]
+    tried = []
+
+    def fake_call(model, system, messages):
+        tried.append(model)
+        if model == "gemini-9-flash":
+            raise Busy("high demand")
+        return "We close at 5pm."
+
+    monkeypatch.setattr(llm, "_call", fake_call)
+    assert llm.generate("rules", [{"role": "user", "text": "When do you close?"}]) == "We close at 5pm."
+    assert tried == ["gemini-9-flash", "gemini-9-flash", "gemini-8-flash"]  # retried once, then fell back
+    assert llm.model == "gemini-8-flash"
+
+    tried.clear()
+    llm.generate("rules", [{"role": "user", "text": "And on Sunday?"}])
+    assert tried == ["gemini-8-flash"]  # remembered the working model, so no time wasted on the busy one
+
+
+def test_bad_key_errors_are_not_retried(monkeypatch):
+    from bot import GeminiLLM
+
+    class Forbidden(Exception):
+        code = 403
+
+    llm = GeminiLLM(api_key="test-key-not-real", model="gemini-9-flash", retry_wait=0)
+    llm.models = ["gemini-9-flash", "gemini-8-flash"]
+    calls = []
+
+    def fake_call(model, system, messages):
+        calls.append(model)
+        raise Forbidden("bad key")
+
+    monkeypatch.setattr(llm, "_call", fake_call)
+    with pytest.raises(Forbidden):
+        llm.generate("rules", [{"role": "user", "text": "hi"}])
+    assert len(calls) == 1  # no pointless retries when the key itself is wrong

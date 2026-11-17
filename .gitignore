@@ -7,3 +7,5 @@ venv/
 Thumbs.db
 .idea/
 .vscode/
+results_*.txt
+python_check.txt

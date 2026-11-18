@@ -92,6 +92,7 @@ class ShopBot:
 
 RETRYABLE = {429, 500, 503, 504}   # rate limited, or Google's servers busy/erroring
 MAX_FALLBACK_MODELS = 5
+TIME_BUDGET = 25    # seconds: give up and send the fallback reply rather than leave a customer waiting
 
 
 def rank_models(names):
@@ -139,14 +140,15 @@ class GeminiLLM:
     next-best model, so one busy model doesn't take the whole chatbot down.
     """
 
-    def __init__(self, api_key=None, model=None, retry_wait=2.0):
+    def __init__(self, api_key=None, model=None, retry_wait=2.0, time_budget=TIME_BUDGET):
         from google import genai  # imported here so tests don't need the package configured
 
         self.types = __import__("google.genai.types", fromlist=["types"])
-        # 30-second limit per request, so a slow or throttled API gives a clear error instead of hanging forever
+        # 15-second limit per request, so a slow or throttled API gives a clear error instead of hanging forever
         self.client = genai.Client(api_key=api_key or os.environ["GEMINI_API_KEY"],
-                                   http_options=self.types.HttpOptions(timeout=30_000))
+                                   http_options=self.types.HttpOptions(timeout=15_000))
         self.retry_wait = retry_wait
+        self.time_budget = time_budget
         forced = model or os.environ.get("GEMINI_MODEL")
         self.models = [forced] if forced else self.available_models()[:MAX_FALLBACK_MODELS]
         self.model = self.models[0]
@@ -181,8 +183,11 @@ class GeminiLLM:
         import time
 
         last_exc = None
+        deadline = time.monotonic() + self.time_budget
         for model in self.models:
             for attempt in range(2):
+                if last_exc is not None and time.monotonic() > deadline:
+                    raise TimeoutError(f"No reply within {self.time_budget}s (last error: {last_exc})")
                 try:
                     reply = self._call(model, system, messages)
                     if model != self.models[0]:
@@ -198,6 +203,8 @@ class GeminiLLM:
                         break  # this model doesn't exist for this key: try the next one
                     if code not in RETRYABLE:
                         raise  # e.g. 400 bad request or 401/403 bad key: retrying won't help
+                    if code == 429 and "PerDay" in str(exc):
+                        break  # today's free quota for this model is used up: waiting won't help, try the next
                     if attempt == 0:
                         time.sleep(self.retry_wait)  # busy: wait a moment, then one more try
             log.warning("Model %s unavailable (%s), trying the next one", model, error_code(last_exc))

@@ -19,8 +19,11 @@ async function ask(question) {
     addMessage(question, "user");
     const typing = addMessage("…", "bot typing");
     send.disabled = true;
+    const timer = new AbortController();
+    const stop = setTimeout(() => timer.abort(), 45000);   // never leave the "…" bubble spinning forever
     try {
         const res = await fetch("/api/chat", {
+            signal: timer.signal,
             method: "POST",
             headers: {"Content-Type": "application/json"},
             body: JSON.stringify({message: question, history: history.slice(-6)}),
@@ -34,6 +37,7 @@ async function ask(question) {
         typing.remove();
         addMessage("Sorry, I couldn't connect. Please check your internet and try again.", "bot");
     } finally {
+        clearTimeout(stop);
         send.disabled = false;
         input.focus();
     }

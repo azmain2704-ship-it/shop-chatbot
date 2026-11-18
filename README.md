@@ -10,6 +10,8 @@ The shop in the demo is Bayside Bakes, a bakery in Cardiff Bay that I made up. T
 
 (That screenshot is from demo mode, which runs without an API key.)
 
+**Try it live: [shop-chatbot-jh42.onrender.com](https://shop-chatbot-jh42.onrender.com)** The hosted version runs in demo mode, so it only handles simple questions (hours, prices, the address, vegan options, allergies). It's on Render's free plan, so the first visit after a quiet spell takes about a minute while the server wakes up.
+
 ## Stopping it from making things up
 
 Calling the AI was the easy part. Getting it to stick to the facts took most of the work. A bot that invents opening hours or a discount is worse than having no bot at all. So the shop's facts go into the system prompt with a rule to only answer from them, and if something isn't covered the bot says it doesn't know and gives the phone number.
@@ -39,7 +41,7 @@ On Windows you can also double-click `setup_and_run_evals.bat`. It finds Python,
 
 I tested it in two ways.
 
-**Unit tests** (`pytest`, 18 tests) use a fake AI, so they run in under a second with no internet. They check the prompt includes the facts and rules, that failures fall back to the phone number, that browser chat history is cleaned before it's used, and that the model fallback below works.
+**Unit tests** (`pytest`, 19 tests) use a fake AI, so they run in under a second with no internet. They check the prompt includes the facts and rules, that failures fall back to the phone number, that browser chat history is cleaned before it's used, and that the model fallback below works.
 
 **Evals** (`python evals/run_evals.py`) send 12 real questions to Gemini and check the answers. Most are normal questions, but some are traps: an allergy question, asking for pizza or a student discount, a prompt injection attempt, and asking for a poem.
 

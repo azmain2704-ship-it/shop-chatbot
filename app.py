@@ -5,6 +5,7 @@ from collections import defaultdict, deque
 
 from dotenv import load_dotenv
 from flask import Flask, jsonify, render_template, request
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 from bot import GeminiLLM, ShopBot, load_facts, shop_name
 from demo import DemoLLM
@@ -26,6 +27,10 @@ def create_app(llm=None, facts=None):
     bot = ShopBot(facts, llm)
     app = Flask(__name__)
     app.config["MAX_CONTENT_LENGTH"] = 32 * 1024
+    if os.environ.get("RENDER"):
+        # Behind Render's proxy every request comes from the proxy's address, so the rate limit would be shared by
+        # everyone. ProxyFix reads the visitor's real address from the X-Forwarded-For header Render adds.
+        app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1)
     recent = defaultdict(deque)
 
     def rate_limited(key):

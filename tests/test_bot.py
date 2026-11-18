@@ -100,6 +100,15 @@ def test_rate_limit_protects_the_free_quota(client):
     assert codes[:10] == [200] * 10 and codes[10:] == [429, 429]
 
 
+def test_rate_limit_is_per_visitor_behind_a_proxy(monkeypatch):
+    """On Render every request arrives via its proxy, so the limit must use the visitor's real address."""
+    monkeypatch.setenv("RENDER", "true")
+    client = create_app(llm=FakeLLM("Hi!")).test_client()
+    send = lambda ip: client.post("/api/chat", json={"message": "hi"}, headers={"X-Forwarded-For": ip}).status_code
+    assert [send("1.1.1.1") for _ in range(11)][-1] == 429
+    assert send("2.2.2.2") == 200   # a different visitor isn't blocked by the first one
+
+
 def test_gemini_adapter_builds_a_valid_request(monkeypatch):
     """Checks the real Gemini wrapper sends the right shape of request, without calling Google."""
     from bot import GeminiLLM

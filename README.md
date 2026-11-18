@@ -1,5 +1,7 @@
 # Shop Chatbot
 
+[![tests](https://github.com/azmain2704-ship-it/shop-chatbot/actions/workflows/tests.yml/badge.svg)](https://github.com/azmain2704-ship-it/shop-chatbot/actions/workflows/tests.yml)
+
 A chatbot for a small shop's website. It answers things like "what time do you close?" or "how much is a latte?", using only the shop's own information. Python, Flask and Google's Gemini API.
 
 The shop in the demo is Bayside Bakes, a bakery in Cardiff Bay that I made up. To use it for a real business, you'd swap `shop_facts.md` for their details.
